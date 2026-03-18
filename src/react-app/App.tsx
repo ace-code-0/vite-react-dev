@@ -1,66 +1,65 @@
-// src/App.tsx
-
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
-import honoLogo from "./assets/hono.svg";
-import "./App.css";
+import { useState, useEffect } from 'react';
+import './App.css';
 
 function App() {
-	const [count, setCount] = useState(0);
-	const [name, setName] = useState("unknown");
+  const targetDate = new Date('2026-03-31T24:00:00').getTime();
+  const [timeLeft, setTimeLeft] = useState<number>(
+    targetDate - new Date('1970-01-01').getTime(),
+  );
 
-	return (
-		<>
-			<div>
-				<a href="https://vite.dev" target="_blank">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-				<a href="https://hono.dev/" target="_blank">
-					<img src={honoLogo} className="logo cloudflare" alt="Hono logo" />
-				</a>
-				<a href="https://workers.cloudflare.com/" target="_blank">
-					<img
-						src={cloudflareLogo}
-						className="logo cloudflare"
-						alt="Cloudflare logo"
-					/>
-				</a>
-			</div>
-			<h1>Vite + React + Hono + Cloudflare</h1>
-			<div className="card">
-				<button
-					onClick={() => setCount((count) => count + 1)}
-					aria-label="increment"
-				>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<div className="card">
-				<button
-					onClick={() => {
-						fetch("/api/")
-							.then((res) => res.json() as Promise<{ name: string }>)
-							.then((data) => setName(data.name));
-					}}
-					aria-label="get name"
-				>
-					Name from API is: {name}
-				</button>
-				<p>
-					Edit <code>worker/index.ts</code> to change the name
-				</p>
-			</div>
-			<p className="read-the-docs">Click on the logos to learn more</p>
-		</>
-	);
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      setTimeLeft(targetDate - now);
+      animationFrameId = requestAnimationFrame(updateTimer);
+    };
+
+    updateTimer();
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [targetDate]);
+
+  const safeTime = Math.max(0, timeLeft);
+  const isFree = safeTime <= 0;
+
+  const d = Math.floor(safeTime / (1000 * 60 * 60 * 24));
+  const h = Math.floor((safeTime / (1000 * 60 * 60)) % 24);
+  const m = Math.floor((safeTime / (1000 * 60)) % 60);
+  const s = Math.floor((safeTime / 1000) % 60);
+  const ms = safeTime % 1000;
+
+  return (
+    <div className="countdown-container">
+      <div className="quote-box">
+        <p className="a-say">“月底前的辞职计划！”</p>
+        <p className="me-say">——倒计时</p>
+      </div>
+
+      <div className="timer-grid">
+        <div className="unit">
+          <span>{d}</span>天
+        </div>
+        <div className="unit">
+          <span>{h}</span>时
+        </div>
+        <div className="unit">
+          <span>{m}</span>分
+        </div>
+        <div className="unit">
+          <span>{s}</span>秒
+        </div>
+        <div>
+          <span>{ms}</span>毫秒
+        </div>
+      </div>
+
+      <div className="status-bar">
+        {isFree ? '恭喜，你自由了！' : `距离 3月31日 还有 ${d} 天`}
+      </div>
+    </div>
+  );
 }
 
 export default App;
