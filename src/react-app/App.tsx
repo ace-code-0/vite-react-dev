@@ -1,34 +1,96 @@
-import { useState, useEffect } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import './App.css';
 
-function App() {
-  const targetDate = new Date('2026-03-31T24:00:00').getTime();
-  const [timeLeft, setTimeLeft] = useState<number>(
-    targetDate - new Date('1970-01-01').getTime(),
-  );
+import Particles, { initParticlesEngine } from '@tsparticles/react';
+import { loadTrianglesPreset } from '@tsparticles/preset-triangles';
+import type { ISourceOptions } from '@tsparticles/engine';
+
+const ParticleBackground = memo(function ParticleBackground() {
+  const [isReady, setIsReady] = useState(false);
+  const [distance, setDistance] = useState(120);
 
   useEffect(() => {
-    let animationFrameId: number;
+    initParticlesEngine(async (engine) => {
+      await loadTrianglesPreset(engine);
+    }).then(() => {
+      setIsReady(true);
+    });
+  }, []);
 
-    const updateTimer = () => {
-      const now = Date.now();
-      setTimeLeft(targetDate - now);
-      animationFrameId = requestAnimationFrame(updateTimer);
+  useEffect(() => {
+    const updateDistance = () => {
+      const width = window.innerWidth;
+
+      if (width < 640) {
+        setDistance(60); // 手机
+      } else if (width < 1024) {
+        setDistance(90); // 平板
+      } else {
+        setDistance(140); // 电脑
+      }
     };
 
-    updateTimer();
+    updateDistance();
+    window.addEventListener('resize', updateDistance);
 
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [targetDate]);
+    return () => window.removeEventListener('resize', updateDistance);
+  }, []);
 
-  const safeTime = Math.max(0, timeLeft);
-  const isFree = safeTime <= 0;
+  const particleOptions = useMemo<ISourceOptions>(
+    () => ({
+      preset: 'triangles',
+      fullScreen: {
+        enable: true,
+        zIndex: 0,
+      },
+      background: {
+        color: {
+          value: '#000000',
+        },
+      },
+      fpsLimit: 60,
+      detectRetina: true,
+      particles: {
+        move: {
+          speed: 0.6,
+        },
+        links: {
+          color: '#00ffff',
+          frequency: 1,
+          opacity: 0.5,
+          width: 1,
+          distance, // 动态 distance
+        },
+      },
+    }),
+    [distance],
+  );
 
-  const d = Math.floor(safeTime / (1000 * 60 * 60 * 24));
-  const h = Math.floor((safeTime / (1000 * 60 * 60)) % 24);
-  const m = Math.floor((safeTime / (1000 * 60)) % 60);
-  const s = Math.floor((safeTime / 1000) % 60);
-  const ms = safeTime % 1000;
+  if (!isReady) return null;
+
+  return <Particles id="tsparticles" options={particleOptions} />;
+});
+
+function Countdown() {
+  const targetTimestamp = new Date('2026-04-01T00:00:00').getTime();
+  const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 16);
+
+    return () => window.clearInterval(timerId);
+  }, []);
+
+  const timeLeft = Math.max(0, targetTimestamp - nowTimestamp);
+  const isFree = timeLeft <= 0;
+
+  const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
+  const seconds = Math.floor((timeLeft / 1000) % 60);
+  const milliseconds = timeLeft % 1000;
 
   return (
     <div className="countdown-container">
@@ -39,25 +101,34 @@ function App() {
 
       <div className="timer-grid">
         <div className="unit">
-          <span>{d}</span>天
+          <span>{days}</span>天
         </div>
         <div className="unit">
-          <span>{h}</span>时
+          <span>{hours}</span>时
         </div>
         <div className="unit">
-          <span>{m}</span>分
+          <span>{minutes}</span>分
         </div>
         <div className="unit">
-          <span>{s}</span>秒
+          <span>{seconds}</span>秒
         </div>
-        <div>
-          <span>{ms}</span>毫秒
+        <div className="unit">
+          <span>{milliseconds}</span>毫秒
         </div>
       </div>
 
       <div className="status-bar">
-        {isFree ? '恭喜，你自由了！' : `距离 3月31日 还有 ${d} 天`}
+        {isFree ? '恭喜，你自由了！' : `距离 3月31日 还有 ${days} 天`}
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div className="app-wrapper">
+      <ParticleBackground />
+      <Countdown />
     </div>
   );
 }
